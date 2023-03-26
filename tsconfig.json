@@ -15,6 +15,7 @@
     "jsx": "preserve",
     "incremental": true,
     "paths": {
+      "@root/*": ["./*"],
       "@interfaces/*": ["./src/types/*"],
       "@components/*": ["./src/components/*"]
     }

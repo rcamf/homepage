@@ -1,223 +1,50 @@
 import { useState, useRef, useEffect } from "react"
-import styles from "@components/styles/Console.module.css"
+import styles from "./Console.module.css"
 import { KeyboardEvent } from "react"
 import DisplayElement from "@interfaces/DisplayElement"
-import ConsoleCommand from "@components/consoleCommand/ConsoleCommand"
 import ConsolePrompt from "@components/consolePrompt/ConsolePrompt"
-import LsOutput from "@components/lsOutput/LsOutput"
-import ErrorOutput from "@components/errorOutput/ErrorOutput"
 import FileStructure from "@interfaces/FileStructure"
-import HelpOutput from "@components/helpOutput/HelpOutput"
+import ConsoleOutput from "@components/consoleOutput/ConsoleOutput"
+import fileStrucure from "@root/fileStructure.json"
+import commands from "@root/commands.json"
 
-export default function Console(props: { pages: string[] }) {
-  let ROOT_FILE_STRUCTURE = {
-    pages: {
-      children: props.pages.reduce((prevObject, page) => ({
-        ...prevObject, [page]: {
-          folder: false
-        }
-      }), {}),
-      folder: true,
-      description: "All of the fun on this website."
-    },
-    projects: {
-      folder: true,
-      children: {},
-      description: "Overview of my github projects."
-    },
-    articles: {
-      folder: true,
-      children: {},
-      description: "Link to all my articles available online."
-    },
-    socials: {
-      folder: true,
-      children: {},
-      description: "If you haven't got enough of me, my socials."
-    }
-  }
+// Constans specific to this application level
+let ROOT_FILE_STRUCTURE: FileStructure = fileStrucure // Initial file system
+const COMMANDS: {
+  [key: string]: any
+} = commands // The description of available commands
+const HISTORY_LENGTH = 100 // Number of executed commands kept in history
+const DISPLAY_SIZE = 100 // Maximum number of displayed console rows
 
-  const HISTORY_LENGTH = 10
-
-  const [path, setPath] = useState<string>("/")
-  const [displayArray, setDisplayArray] = useState<DisplayElement[]>([])
+export default function Console() {
+  // State
+  const [path, setPath] = useState<string>("/") // Current console path
+  const [displayArray, setDisplayArray] = useState<DisplayElement[]>([]) // Array of currently displayed elements
   const [commandHistory, setCommandHistory] = useState<{
     index: number,
     history: string[]
   }>({
     index: -1,
     history: []
-  })
+  }) // History of executed commands
   const [fileSystem, updateFileSystem] = useState<{
     root: FileStructure,
     current: FileStructure
   }>({
     root: ROOT_FILE_STRUCTURE,
     current: ROOT_FILE_STRUCTURE
-  })
+  }) // The file system we are operating in
 
-  const getDirectory = (targetPath: string, currentDirectory: FileStructure) => {
-    let startDirectory = currentDirectory
-    const steps = targetPath.split("/")
-    console.log(steps)
-    steps.forEach((step, idx) => {
-      if (step !== "" && step !== ".") {
-        console.log(idx, step, currentDirectory)
-        if (step !== "..") {
-          if (currentDirectory.hasOwnProperty(step)) {
-            if (!currentDirectory[step].folder) {
-              throw new Error(`ERROR: ${steps.slice(0, idx + 1).join("/")} is not a folder.`)
-            }
-            currentDirectory = currentDirectory[step].children
-          } else {
-            throw new Error(`ERROR: ${targetPath} could not be found. Use 'ls' to check out available paths.`)
-          }
-        } else {
-          currentDirectory = getDirectory(steps.slice(0, idx - 1 > 0 ? idx - 1 : 0).join("/"), fileSystem.root)
-        }
-      }
-    })
-    return currentDirectory
-  }
+  // Refs
+  const consoleInputRef = useRef<HTMLInputElement>(null) // Console Input Element Ref
+  const consolePrompt = useRef(`user@rfelten.de:${path}$`) // Console Prompt Ref
 
-  const parseInputPath = (inputPath: string) => {
-    const components = inputPath.split("/")
-    console.log(path.slice(1).split("/"))
-    const parsedPathComponents: string[] = components[0] === "" || path === "/" ? [] : path.slice(1).split("/")
-    components.forEach(component => {
-      if (component == "..") {
-        parsedPathComponents.pop()
-      } else if (!["", "."].includes(component)) {
-        parsedPathComponents.push(component)
-      }
-    })
-    console.log(components, parsedPathComponents)
-    if (components[0] === "" || path === "/") {
-      return "/" + parsedPathComponents.join("/")
-    } else {
-      return "/" + parsedPathComponents.join("/")
-    }
-  }
-
-  const clickOnConsole = () => {
-    if (consoleInputRef.current) {
-      consoleInputRef.current.focus()
-    }
-  }
-
-  const getDirectoryDescription = (args: string, currentDirectory: FileStructure) => {
-    const argsSplit = args !== "" ? args.split("/") : path.split("/")
-    // console.log(argsSplit)
-    return getDirectory(argsSplit.slice(0, argsSplit.length - 2).join("/"), fileSystem.root)[argsSplit[argsSplit.length - 1]].description
-  }
-
-  const commands: {
-    [key: string]: {
-      run: Function,
-      description: string
-    }
-  } = {
-    ls: {
-      run: (args: string) => {
-        const currentDirectory = fileSystem.current
-        let outputDirectory = currentDirectory
-        let directoryDescription = path === "/" ? "Root Directory" : getDirectoryDescription(args, currentDirectory)
-        let directoryPath = ""
-        if (args !== "" && path === "/") {
-          try {
-            outputDirectory = getDirectory(args, currentDirectory)
-            const argsSplit = args.split("/")
-            directoryDescription = getDirectoryDescription(args, currentDirectory)
-            directoryPath = argsSplit.join("/")
-            console.log(path)
-          } catch (error: any) {
-            return [
-              {
-                value: error.message,
-                prompt: consolePrompt,
-                component: ErrorOutput
-              }
-            ]
-          }
-        }
-        const newArray = [
-          {
-            value: JSON.stringify({
-              folder: true,
-              description: directoryDescription,
-              key: "./" + directoryPath
-            }),
-            prompt: consolePrompt,
-            component: LsOutput
-          },
-          ...Object.keys(outputDirectory).sort().map(key => ({
-            value: JSON.stringify({
-              ...outputDirectory[key],
-              key
-            }),
-            prompt: consolePrompt,
-            component: LsOutput
-          }))
-        ]
-        return newArray
-      },
-      description: "Show the content of the specified directory (If none is specified the current one)."
-    },
-    cd: {
-      run: (args: string) => {
-        if (args === "") {
-          updateFileSystem({
-            ...fileSystem,
-            current: fileSystem.root
-          })
-          return []
-        }
-        try {
-          const resultDirectory = getDirectory(args, fileSystem.current)
-          const newPath = parseInputPath(args)
-          setPath(newPath)
-          updateFileSystem({
-            ...fileSystem,
-            current: resultDirectory
-          })
-          return []
-        } catch (error: any) {
-          return [
-            {
-              value: error.message,
-              prompt: consolePrompt,
-              component: ErrorOutput
-            }
-          ]
-        }
-      },
-      description: "Navigate to another directory e.g. 'cd <PATH>' (No specification of the path brings you to root)."
-    },
-    help: {
-      run: () => {
-        return Object.keys(commands).sort().map(command => ({
-          value: `${command}: ${commands[command].description}`,
-          prompt: consolePrompt,
-          component: HelpOutput
-        }))
-      },
-      description: "Opens this helpful explanation."
-    },
-    clear: {
-      run: () => {
-        setDisplayArray([])
-      },
-      description: "Clears all previous console outputs."
-    }
-  }
-
-  const consoleInputRef = useRef<HTMLInputElement>(null)
-  const consolePrompt = `user@rfelten.de:${path}$`
-
+  // React Hooks
   useEffect(() => {
     if (consoleInputRef.current) {
       consoleInputRef.current.focus()
     }
+    consolePrompt.current = `user@${window.location.hostname}:${path}$`
     setPath("/")
     fetch("https://api.github.com/users/rcamf/repos")
       .then(res => res.json())
@@ -240,7 +67,83 @@ export default function Console(props: { pages: string[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function handleEnter(event: KeyboardEvent) {
+  // Utility functions
+  // Traverses the path supplied, starting at the current directory
+  const getDirectory = (path: string, currentDirectory: FileStructure) => {
+    let startDirectory = currentDirectory
+    const steps = path.split("/")
+    // console.log(steps)
+    steps.forEach((step, idx) => {
+      if (step !== "" && step !== ".") {
+        // console.log(idx, step, currentDirectory)
+        if (step !== "..") {
+          if (currentDirectory.hasOwnProperty(step)) {
+            if (!currentDirectory[step].folder) {
+              throw new Error(`ERROR: ${steps.slice(0, idx + 1).join("/")} is not a folder.`)
+            }
+            currentDirectory = currentDirectory[step].children
+          } else {
+            throw new Error(`ERROR: ${path} could not be found. Use 'ls' to check out available paths.`)
+          }
+        } else {
+          currentDirectory = getDirectory(steps.slice(0, idx - 1 > 0 ? idx - 1 : 0).join("/"), fileSystem.root)
+        }
+      }
+    })
+    return currentDirectory
+  }
+  
+  // Generates the value for the error HistoryElement
+  const getErrorOutputElements = (message: string) => {
+    const splitIndex = message.indexOf(" ")
+    return JSON.stringify([
+      {
+        value: message.slice(0, splitIndex),
+        style: "error"
+      },
+      {
+        value: message.slice(splitIndex + 1)
+      }
+    ])
+  }
+
+  // Get the description of the supplied path
+  const getDescription = (path: string) => {
+    const argsSplit = path !== "" ? path.split("/") : path.split("/")
+    // console.log(argsSplit)
+    return getDirectory(argsSplit.slice(0, argsSplit.length - 2).join("/"), fileSystem.root)[argsSplit[argsSplit.length - 1]].description
+  }
+
+  // Prettify paths
+  const parseInputPath = (inputPath: string) => {
+    const components = inputPath.split("/")
+    // console.log(path.slice(1).split("/"))
+    const parsedPathComponents: string[] = components[0] === "" || path === "/" ? [] : path.slice(1).split("/")
+    components.forEach(component => {
+      if (component == "..") {
+        parsedPathComponents.pop()
+      } else if (!["", "."].includes(component)) {
+        parsedPathComponents.push(component)
+      }
+    })
+    // console.log(components, parsedPathComponents)
+    if (components[0] === "" || path === "/") {
+      return "/" + parsedPathComponents.join("/")
+    } else {
+      return "/" + parsedPathComponents.join("/")
+    }
+  }
+
+  // DOM modifying functions
+  // Focus the console input onClick
+  const clickOnConsole = () => {
+    if (consoleInputRef.current) {
+      consoleInputRef.current.focus()
+    }
+  }
+
+  // Handle keyboard inputs on console
+  const handleKeyboardInput = (event: KeyboardEvent) => {
     if (event.key === "Enter") {
       event.preventDefault()
       if (consoleInputRef.current) {
@@ -256,30 +159,37 @@ export default function Console(props: { pages: string[] }) {
         }
         consoleInputRef.current.value = ""
         let outputElements: DisplayElement[] = [
-          ...displayArray,
           {
-            value: args.join(" "),
-            prompt: consolePrompt,
-            component: ConsoleCommand
+            value: JSON.stringify([{
+              value: args.join(" ")
+            }]),
+            prompt: consolePrompt.current,
           }
         ]
         if (args[0] === "ls") {
-          outputElements.push(...commands.ls.run(args.length > 1 ? args[1] : ""))
+          outputElements.push(...ls(args.length > 1 ? args[1] : ""))
         } else if (args[0] === "cd") {
-          outputElements.push(...commands.cd.run(args.length > 1 ? args[1] : ""))
+          outputElements.push(...cd(args.length > 1 ? args[1] : ""))
         } else if (args[0] === "clear") {
-          commands.clear.run()
-          outputElements = []
+          clear()
+          return
         } else if (args[0] === "help") {
-          outputElements.push(...commands.help.run())
+          outputElements.push(...help())
         } else {
           outputElements.push({
-            value: `ERROR: ${args[0] === "" ? "Enter a valid" : `${args[0]} is an invalid`} command. Use help to get an overview.`,
-            prompt: consolePrompt,
-            component: ErrorOutput
+            value: JSON.stringify([
+              {
+                value: "ERROR:",
+                style: "error"
+              },
+              {
+                value: `${args[0] === "" ? "Enter a valid" : `${args[0]} is an invalid`} command. Use help to get an overview.`
+              }
+            ])
           })
         }
         setDisplayArray([
+          ...displayArray.slice(displayArray.length + outputElements.length > DISPLAY_SIZE ? displayArray.length + outputElements.length - DISPLAY_SIZE : 0),
           ...outputElements
         ])
 
@@ -314,14 +224,111 @@ export default function Console(props: { pages: string[] }) {
     }
   }
 
+  // Command Functions
+  // ls command
+  const ls = (args: string) => {
+    const currentDirectory = fileSystem.current
+    let outputDirectory = currentDirectory
+    let directoryDescription = path === "/" ? "Root Directory" : getDescription(args)
+    let directoryPath = ""
+    if (args !== "" && path === "/") {
+      try {
+        outputDirectory = getDirectory(args, currentDirectory)
+        const argsSplit = args.split("/")
+        directoryDescription = getDescription(args)
+        directoryPath = argsSplit.join("/")
+        // console.log(path)
+      } catch (error: any) {
+        return [
+          {
+            value: getErrorOutputElements(error.message)
+          }
+        ]
+      }
+    }
+    const newArray = [
+      {
+        value: JSON.stringify([
+          {
+            style: "folder",
+            value: "./" + directoryPath
+          }
+          , {
+            value: directoryDescription
+          }
+        ])
+      },
+      ...Object.keys(outputDirectory).sort().map(key => ({
+        value: JSON.stringify([
+          {
+            value: key,
+            style: outputDirectory[key].folder ? "folder" : "file",
+            url: outputDirectory[key].url
+          },
+          {
+            value: outputDirectory[key].description
+          }
+        ])
+      }))
+    ]
+    return newArray
+  }
+
+  // CD COMMAND
+  const cd = (path: string) => {
+    if (path === "") {
+      updateFileSystem({
+        ...fileSystem,
+        current: fileSystem.root
+      })
+      return []
+    }
+    try {
+      const resultDirectory = getDirectory(path, fileSystem.current)
+      const newPath = parseInputPath(path)
+      setPath(newPath)
+      updateFileSystem({
+        ...fileSystem,
+        current: resultDirectory
+      })
+      return []
+    } catch (error: any) {
+      return [
+        {
+          value: getErrorOutputElements(error.message)
+        }
+      ]
+    }
+  }
+
+  // HELP COMMAND
+  const help = () => {
+    return Object.keys(COMMANDS).sort().map(command => ({
+      value: JSON.stringify([
+        {
+          value: `${command}:`
+        },
+        {
+          value: `${COMMANDS[command].description}`
+        }
+      ])
+    }))
+  }
+
+  // CLEAR COMMAND 
+  const clear = () => {
+    setDisplayArray([])
+  }
+
+  // Rendered HTML
   return <div className={styles.consoleWrapper} onClick={clickOnConsole}>
     <div className={styles.consoleDiv}>
       {displayArray.map((element, key) => {
-        return <element.component key={key} value={element.value} prompt={element.prompt} />
+        return <ConsoleOutput key={key} data={element} />
       })}
       <div className={styles.elementDiv}>
-        <ConsolePrompt prompt={consolePrompt} />
-        <input type="text" ref={consoleInputRef} onKeyDown={handleEnter} />
+        <ConsolePrompt prompt={consolePrompt.current} />
+        <input type="text" ref={consoleInputRef} onKeyDown={handleKeyboardInput} />
       </div>
     </div>
   </div>

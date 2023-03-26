@@ -1,6 +1,7 @@
-import styles from "@components/styles/Console.module.css"
+import styles from "./ConsolePrompt.module.css"
 
 export default function ConsolePrompt({ prompt }: { prompt: string }) {
+  console.log(prompt)
   let parts = prompt.split("@")
   const user = parts[0]
   parts = parts[1].split(":")
