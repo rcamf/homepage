@@ -1,0 +1,48 @@
+{
+  "pages": {
+    "children": {
+      "wiki": {
+        "folder": false,
+        "description": "My personal MediaWiki instance.",
+        "url": "https://wiki.rfelten.de",
+        "children": {}
+      }
+    },
+    "folder": true,
+    "description": "All of the fun on this website."
+  },
+  "projects": {
+    "folder": true,
+    "children": {},
+    "description": "Overview of my github projects."
+  },
+  "articles": {
+    "folder": true,
+    "children": {},
+    "description": "Link to all my articles available online."
+  },
+  "socials": {
+    "folder": true,
+    "children": {
+      "linkedIn": {
+        "description": "My LinkedIn profile.",
+        "children": {},
+        "url": "https://www.linkedin.com/in/raphael-felten-617415247/",
+        "folder": false
+      },
+      "instagram": {
+        "description": "Look at my pretty pictures.",
+        "children": {},
+        "url": "https://www.instagram.com/r.cam.f/",
+        "folder": false
+      },
+      "github": {
+        "description": "Visit my github profile for small projects.",
+        "children": {},
+        "url": "https://github.com/rcamf",
+        "folder": false
+      }
+    },
+    "description": "If you haven't got enough of me, my socials."
+  }
+}

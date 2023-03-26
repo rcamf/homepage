@@ -1,0 +1,28 @@
+.consoleLink {
+  font-style: italic;
+  position: relative;
+}
+
+.consoleLink:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tooltipSpan {
+  position: absolute;
+  visibility: hidden;
+  background-color: rgba(255, 255, 255, 0.7);
+  border: 1px solid black;
+  color: black;
+  z-index: 1;
+  padding: 0.125rem;
+  font-style: normal;
+  top: -5px;
+  left: 105%;
+  font-size: smaller;
+
+}
+
+.consoleLink:hover .tooltipSpan {
+  visibility: visible;
+}
