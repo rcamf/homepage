@@ -69,31 +69,27 @@ export default function Console() {
 
   // Utility functions
   // Traverses the path supplied, starting at the current directory
-  const getDirectory = (path: string, currentDirectory: FileStructure) => {
-    let startDirectory = currentDirectory
-    const steps = path.split("/")
+  const getDirectory = (targetPath: string) => {
+    const parsedPath = addPathToCurrentPath(targetPath)
+    let currentDirectory = fileSystem.root
+    const steps = parsedPath.split("/")
     console.log(steps)
     steps.forEach((step, idx) => {
-      if (step !== "" && step !== ".") {
-        console.log(idx, step, currentDirectory)
-        if (step !== "..") {
-          if (currentDirectory.hasOwnProperty(step)) {
-            if (!currentDirectory[step].folder) {
-              throw new Error(`ERROR: ${steps.slice(0, idx + 1).join("/")} is not a folder.`)
-            }
-            currentDirectory = currentDirectory[step].children
-          } else {
-            throw new Error(`ERROR: ${path} could not be found. Use 'ls' to check out available paths.`)
+      if (step !== "") {
+        // console.log(idx, step, currentDirectory)
+        if (currentDirectory.hasOwnProperty(step)) {
+          if (!currentDirectory[step].folder) {
+            throw new Error(`ERROR: ${steps.slice(0, idx + 1).join("/")} is not a folder.`)
           }
+          currentDirectory = currentDirectory[step].children
         } else {
-          const parsedPath = parseInputPath(steps.slice(0, idx + 1).join("/"))
-          currentDirectory = getDirectory(parsedPath, fileSystem.root)
+          throw new Error(`ERROR: ${targetPath} could not be found. Use 'ls' to check out available paths.`)
         }
       }
     })
     return currentDirectory
   }
-  
+
   // Generates the value for the error HistoryElement
   const getErrorOutputElements = (message: string) => {
     const splitIndex = message.indexOf(" ")
@@ -110,16 +106,19 @@ export default function Console() {
 
   // Get the description of the supplied path
   const getDescription = (descriptionPath: string) => {
-    const argsSplit = descriptionPath !== "" ? descriptionPath.split("/") : path.split("/")
-    // console.log(argsSplit)
-    return getDirectory(argsSplit.slice(0, argsSplit.length - 2).join("/"), fileSystem.root)[argsSplit[argsSplit.length - 1]].description
+    const argsSplit = addPathToCurrentPath(descriptionPath).split("/")
+    const temp = argsSplit.length === 2 ? "/" : argsSplit.slice(0, argsSplit.length - 1).join("/")
+    console.log(temp, getDirectory(temp))
+    return getDirectory(temp)[argsSplit[argsSplit.length - 1]].description
   }
 
   // Prettify paths
-  const parseInputPath = (inputPath: string) => {
+  const addPathToCurrentPath = (inputPath: string) => {
     const components = inputPath.split("/")
-    // console.log(path.slice(1).split("/"))
-    const parsedPathComponents: string[] = components[0] === "" || path === "/" ? [] : path.slice(1).split("/")
+    if (components.length > 1 && components.every(value => value === "")) {
+      return "/"
+    }
+    const parsedPathComponents: string[] = path === "/" ? [] : path.slice(1).split("/")
     components.forEach(component => {
       if (component == "..") {
         parsedPathComponents.pop()
@@ -127,12 +126,8 @@ export default function Console() {
         parsedPathComponents.push(component)
       }
     })
-    // console.log(components, parsedPathComponents)
-    if (components[0] === "" || path === "/") {
-      return "/" + parsedPathComponents.join("/")
-    } else {
-      return "/" + parsedPathComponents.join("/")
-    }
+    // console.log(parsedPathComponents)
+    return "/" + parsedPathComponents.join("/")
   }
 
   // DOM modifying functions
@@ -228,14 +223,15 @@ export default function Console() {
   // Command Functions
   // ls command
   const ls = (args: string) => {
-    const currentDirectory = fileSystem.current
+    const currentDirectory = addPathToCurrentPath(args) === "/" ? fileSystem.root : fileSystem.current
     let outputDirectory = currentDirectory
-    let directoryDescription = path === "/" ? "Root Directory" : getDescription(args)
+    let directoryDescription = "Root Directory"
     let directoryPath = ""
-    if (args !== "" && path === "/") {
+    if (addPathToCurrentPath(args) != "/") {
       try {
-        outputDirectory = getDirectory(args, currentDirectory)
+        outputDirectory = getDirectory(args)
         const argsSplit = args.split("/")
+        console.log("TEST")
         directoryDescription = getDescription(args)
         directoryPath = argsSplit.join("/")
         // console.log(path)
@@ -287,8 +283,8 @@ export default function Console() {
       return []
     }
     try {
-      const resultDirectory = getDirectory(path, fileSystem.current)
-      const newPath = parseInputPath(path)
+      const resultDirectory = getDirectory(path)
+      const newPath = addPathToCurrentPath(path)
       setPath(newPath)
       consolePrompt.current = `${consolePrompt.current.split(":")[0]}:${newPath}$`
       updateFileSystem({
