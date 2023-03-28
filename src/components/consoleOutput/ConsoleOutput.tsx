@@ -5,7 +5,8 @@ import styles from "./ConsoleOutput.module.css"
 
 export default function ConsoleOutput({ data }: { data: DisplayElement }) {
   const content: any[] = JSON.parse(data.value)
-  console.log(content)
+  // console.log(content)
+  const hasPrompt = data.prompt ? 0 : 1
   let style
   switch (content[0].style) {
     case "folder":
@@ -35,11 +36,11 @@ export default function ConsoleOutput({ data }: { data: DisplayElement }) {
         </span>
     }
     {
-      content.slice(1).map((element, idx) => <span key={idx} className={styles.elementSpan}>
+      content.slice(hasPrompt).map((element, idx) => <span key={idx} className={styles.elementSpan}>
         {
-          content[idx + 1].url ?
-            <ConsoleLink url={content[idx + 1].url} text={content[idx + 1].value} />
-            : content[idx + 1].value
+          content[idx + hasPrompt].url ?
+            <ConsoleLink url={content[idx + hasPrompt].url} text={content[idx + hasPrompt].value} />
+            : content[idx + hasPrompt].value
         }
       </span>)
     }
