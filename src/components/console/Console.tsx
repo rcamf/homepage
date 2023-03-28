@@ -72,10 +72,10 @@ export default function Console() {
   const getDirectory = (path: string, currentDirectory: FileStructure) => {
     let startDirectory = currentDirectory
     const steps = path.split("/")
-    // console.log(steps)
+    console.log(steps)
     steps.forEach((step, idx) => {
       if (step !== "" && step !== ".") {
-        // console.log(idx, step, currentDirectory)
+        console.log(idx, step, currentDirectory)
         if (step !== "..") {
           if (currentDirectory.hasOwnProperty(step)) {
             if (!currentDirectory[step].folder) {
@@ -86,7 +86,8 @@ export default function Console() {
             throw new Error(`ERROR: ${path} could not be found. Use 'ls' to check out available paths.`)
           }
         } else {
-          currentDirectory = getDirectory(steps.slice(0, idx - 1 > 0 ? idx - 1 : 0).join("/"), fileSystem.root)
+          const parsedPath = parseInputPath(steps.slice(0, idx + 1).join("/"))
+          currentDirectory = getDirectory(parsedPath, fileSystem.root)
         }
       }
     })
