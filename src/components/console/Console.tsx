@@ -108,8 +108,8 @@ export default function Console() {
   }
 
   // Get the description of the supplied path
-  const getDescription = (path: string) => {
-    const argsSplit = path !== "" ? path.split("/") : path.split("/")
+  const getDescription = (descriptionPath: string) => {
+    const argsSplit = descriptionPath !== "" ? descriptionPath.split("/") : path.split("/")
     // console.log(argsSplit)
     return getDirectory(argsSplit.slice(0, argsSplit.length - 2).join("/"), fileSystem.root)[argsSplit[argsSplit.length - 1]].description
   }
@@ -281,12 +281,15 @@ export default function Console() {
         ...fileSystem,
         current: fileSystem.root
       })
+      setPath("/")
+      consolePrompt.current = `${consolePrompt.current.split(":")[0]}:/$`
       return []
     }
     try {
       const resultDirectory = getDirectory(path, fileSystem.current)
       const newPath = parseInputPath(path)
       setPath(newPath)
+      consolePrompt.current = `${consolePrompt.current.split(":")[0]}:${newPath}$`
       updateFileSystem({
         ...fileSystem,
         current: resultDirectory

@@ -1,0 +1,14 @@
+{
+  "ls": {
+    "description": "Show the content of the specified directory (If none is specified the current one)."
+  },
+  "cd": {
+    "description": "Navigate to another directory e.g. 'cd <PATH>' (No specification of the path brings you to root)."
+  },
+  "help": {
+    "description": "Opens this helpful explanation."
+  },
+  "clear": {
+    "description": "Clears all previous console outputs."
+  }
+}

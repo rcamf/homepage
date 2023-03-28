@@ -1,0 +1,19 @@
+.elementSpan {
+  padding-right: 0.5rem;
+}
+
+.folderSpan {
+  color: lightgreen
+}
+
+.fileSpan {
+  color: turquoise
+}
+
+.errorSpan {
+  color: #ff5959;
+}
+
+.normalSpan {
+  
+}
